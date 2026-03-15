@@ -181,18 +181,33 @@
 
         .upload-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 1rem;
         }
 
         .upload-card {
-            aspect-ratio: 694 / 568;
-            background: var(--olive);
-            border-radius: 10px;
             position: relative;
             cursor: pointer;
             overflow: hidden;
+            border-radius: 10px;
+            background: var(--olive);
             transition: transform 0.2s, box-shadow 0.2s;
+            /* Aspect ratio with padding-bottom fallback */
+            aspect-ratio: 694 / 568;
+        }
+
+        /* Fallback for browsers where aspect-ratio doesn't work in grid */
+        @supports not (aspect-ratio: 1) {
+            .upload-card::before {
+                content: '';
+                display: block;
+                padding-bottom: 81.8%; /* 568/694 */
+            }
+        }
+
+        .upload-card-inner {
+            position: absolute;
+            inset: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -703,9 +718,8 @@
     const TEMPLATE_URL = '/2026_template.pdf';
 
     // Supabase config (to be filled in)
-    const SUPABASE_URL = 'https://eanqljtercjlewwrjhix.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhbnFsanRlcmNqbGV3d3JqaGl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NzYzNzEsImV4cCI6MjA4OTE1MjM3MX0.aqSq-GbMBV6iT0qmtzkxoCyJFgELQX-k_dtxHH_XuTw
-';
+    const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
+    const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
 
     // ─────────────────────────────────────────────
     // STATE
@@ -724,19 +738,21 @@
         card.className = 'upload-card';
         card.dataset.month = i;
         card.innerHTML = `
-            <div class="upload-icon">
-                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="5" x2="12" y2="19"/>
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
+            <div class="upload-card-inner">
+                <div class="upload-icon">
+                    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                </div>
+                <span class="month-label">${month}</span>
+                <button class="remove-btn" title="Remove photo">
+                    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
             </div>
-            <span class="month-label">${month}</span>
-            <button class="remove-btn" title="Remove photo">
-                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="18" y1="6" x2="6" y2="18"/>
-                    <line x1="6" y1="6" x2="18" y2="18"/>
-                </svg>
-            </button>
             <input type="file" accept="image/jpeg,image/png,image/webp" id="file-${i}">
         `;
         uploadGrid.appendChild(card);
