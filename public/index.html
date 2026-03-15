@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>2026 Photo Calendar — Print-Ready PDF</title>
-    <meta name="description" content="Upload 12 photos, get a beautiful print-ready 2026 calendar PDF. Custom photo calendars made easy.">
+    <title>Custom 2026 Calendars — taprimasti.com</title>
+    <meta name="description" content="Put what you love on the months to come. Upload 12 photos, get a print-ready 2026 calendar PDF. Makes for an adorable gift too.">
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -364,8 +364,8 @@
         }
 
         .price-amount {
-            font-family: 'Caveat', cursive;
-            font-size: 2rem;
+            font-family: 'Gabarito', sans-serif;
+            font-size: 1.8rem;
             font-weight: 700;
             color: var(--olive);
             line-height: 1;
@@ -585,9 +585,13 @@
         /* ─── FOOTER ─── */
         .site-footer {
             text-align: center;
-            padding: 2rem 1rem;
+            padding: 2.5rem 1.5rem;
             color: var(--text-light);
-            font-size: 0.8rem;
+            font-size: 0.85rem;
+            line-height: 1.6;
+            font-style: italic;
+            max-width: 520px;
+            margin: 0 auto;
         }
 
         /* ─── RESPONSIVE ─── */
@@ -617,14 +621,32 @@
             outline-offset: -6px;
             background: var(--olive-dark);
         }
+
+        .preview-card.dragging {
+            opacity: 0.5;
+            transform: scale(0.95);
+        }
+
+        .preview-card.drag-target {
+            outline: 3px dashed var(--olive);
+            outline-offset: -3px;
+        }
+
+        .preview-card {
+            cursor: grab;
+        }
+
+        .preview-card:active {
+            cursor: grabbing;
+        }
     </style>
 </head>
 <body>
 
     <!-- HEADER -->
     <header class="site-header">
-        <h1>2026 Photo Calendar</h1>
-        <p>Upload 12 photos. Get a print-ready PDF calendar.</p>
+        <h1>Custom 2026 Calendars</h1>
+        <p>So what if a couple months have swept by, put what you love on the months to come.<br>Makes for an adorable gift too</p>
     </header>
 
     <!-- STEPS -->
@@ -636,7 +658,7 @@
         <div class="step-connector" id="conn-1"></div>
         <div class="step-indicator" id="step-ind-2">
             <span class="step-num">2</span>
-            <span>Pay</span>
+            <span>Checkout</span>
         </div>
         <div class="step-connector" id="conn-2"></div>
         <div class="step-indicator" id="step-ind-3">
@@ -651,7 +673,7 @@
         <!-- STEP 1: UPLOAD -->
         <section class="section active" id="section-upload">
             <div class="upload-section-header">
-                <h2>Pick your 12 photos</h2>
+                <h2>Pick Your Pictures</h2>
                 <p>One photo per month. Landscape works best.</p>
             </div>
             <div class="upload-grid" id="upload-grid"></div>
@@ -669,15 +691,18 @@
         <!-- STEP 2: PREVIEW + PAY -->
         <section class="section" id="section-preview">
             <div class="upload-section-header">
-                <h2>Looking good!</h2>
-                <p>Here's your calendar lineup.</p>
+                <h2>Here's Your Lineup</h2>
+                <p>A Print-Ready PDF Calendar. Any Xerox / Photocopy store around you will be able to print it.</p>
             </div>
             <div class="preview-grid" id="preview-grid"></div>
+            <div class="upload-counter" style="margin-top: 0.75rem; font-size: 0.85rem; color: var(--text-light);">
+                Drag and drop to swap photos between months
+            </div>
             
             <div class="checkout-section" style="margin-top: 2rem;">
                 <div class="price-tag">
                     <span class="price-amount">₹149</span>
-                    <span class="price-desc">Print-ready PDF, delivered instantly</span>
+                    <span class="price-desc">Print-ready PDF, delivered instantly<br><em>Accepts global payments too</em></span>
                 </div>
                 
                 <div class="form-group">
@@ -695,7 +720,6 @@
                 </button>
                 <button class="btn btn-primary" id="btn-pay">
                     Pay ₹149 & Download
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 </button>
             </div>
         </section>
@@ -731,7 +755,7 @@
     </main>
 
     <footer class="site-footer">
-        Made with cat-like precision.
+        <p>Stand still. The trees ahead and bushes beside you are not lost.<br>Wherever you are is called here, and you must treat it as a powerful stranger.</p>
     </footer>
 
     <script>
@@ -925,7 +949,7 @@
             key: RAZORPAY_KEY,
             amount: PRICE_PAISE,
             currency: 'INR',
-            name: '2026 Photo Calendar',
+            name: 'Custom 2026 Calendar',
             description: 'Print-ready PDF calendar with your photos',
             prefill: {
                 email: email,
@@ -959,6 +983,7 @@
         for (let i = 0; i < 12; i++) removePhoto(i);
         document.getElementById('email-input').value = '';
         generatedPdfBytes = null;
+        window.photoOrder = null;
         showSection('section-upload');
     });
 
@@ -968,15 +993,55 @@
     function buildPreview() {
         const grid = document.getElementById('preview-grid');
         grid.innerHTML = '';
-        MONTHS.forEach((month, i) => {
+        
+        // Track the photo-to-month assignment (starts as 0→0, 1→1, etc.)
+        // photoOrder[i] = which photo index is assigned to month i
+        if (!window.photoOrder) {
+            window.photoOrder = MONTHS.map((_, i) => i);
+        }
+        
+        MONTHS.forEach((month, monthIdx) => {
+            const photoIdx = window.photoOrder[monthIdx];
             const card = document.createElement('div');
             card.className = 'preview-card';
+            card.draggable = true;
+            card.dataset.monthIdx = monthIdx;
             card.innerHTML = `
                 <div class="preview-card-image">
-                    <img src="${photoURLs[i]}" alt="${month}">
+                    <img src="${photoURLs[photoIdx]}" alt="${month}">
                 </div>
                 <div class="preview-card-label">${month}</div>
             `;
+            
+            // Drag events for swapping
+            card.addEventListener('dragstart', (e) => {
+                e.dataTransfer.setData('text/plain', monthIdx);
+                card.classList.add('dragging');
+            });
+            card.addEventListener('dragend', () => {
+                card.classList.remove('dragging');
+            });
+            card.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                card.classList.add('drag-target');
+            });
+            card.addEventListener('dragleave', () => {
+                card.classList.remove('drag-target');
+            });
+            card.addEventListener('drop', (e) => {
+                e.preventDefault();
+                card.classList.remove('drag-target');
+                const fromMonth = parseInt(e.dataTransfer.getData('text/plain'));
+                const toMonth = monthIdx;
+                if (fromMonth !== toMonth) {
+                    // Swap photos between the two months
+                    const temp = window.photoOrder[fromMonth];
+                    window.photoOrder[fromMonth] = window.photoOrder[toMonth];
+                    window.photoOrder[toMonth] = temp;
+                    buildPreview();
+                }
+            });
+            
             grid.appendChild(card);
         });
     }
@@ -1006,7 +1071,7 @@
                 progressText.textContent = `Adding ${MONTHS[i]} photo...`;
                 progressBar.style.width = `${10 + (i + 1) * 7}%`;
                 
-                const file = photos[i];
+                const file = photos[window.photoOrder ? window.photoOrder[i] : i];
                 const page = pages[i]; // Pages 0-11 are Jan-Dec
                 
                 // Get image dimensions via browser, crop to rect aspect, embed
