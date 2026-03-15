@@ -1,0 +1,1093 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2026 Photo Calendar — Print-Ready PDF</title>
+    <meta name="description" content="Upload 12 photos, get a beautiful print-ready 2026 calendar PDF. Custom photo calendars made easy.">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&family=Gabarito:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- pdf-lib for client-side PDF generation -->
+    <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+
+    <style>
+        :root {
+            --cream: #F0EBD8;
+            --cream-dark: #E4DCCA;
+            --olive: #768E4E;
+            --olive-dark: #5A6E3A;
+            --olive-light: #8BA362;
+            --text-dark: #3A3A2E;
+            --text-mid: #6B6B58;
+            --text-light: #9A9A86;
+            --white: #FEFDFB;
+            --error: #C44D4D;
+            --shadow: rgba(60, 55, 40, 0.08);
+            --shadow-heavy: rgba(60, 55, 40, 0.15);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Gabarito', sans-serif;
+            background: var(--cream);
+            color: var(--text-dark);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ─── HEADER ─── */
+        .site-header {
+            padding: 2rem 1.5rem 1rem;
+            text-align: center;
+            position: relative;
+        }
+
+        .site-header h1 {
+            font-family: 'Caveat', cursive;
+            font-size: clamp(2.8rem, 6vw, 4.2rem);
+            color: var(--olive);
+            font-weight: 700;
+            line-height: 1.1;
+            letter-spacing: -0.01em;
+        }
+
+        .site-header p {
+            font-size: 1.05rem;
+            color: var(--text-mid);
+            margin-top: 0.5rem;
+            max-width: 420px;
+            margin-left: auto;
+            margin-right: auto;
+            line-height: 1.5;
+        }
+
+        /* ─── STEPS INDICATOR ─── */
+        .steps-bar {
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            padding: 1.5rem 1rem 0.5rem;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            transition: color 0.3s;
+            flex: 1;
+            justify-content: center;
+        }
+
+        .step-indicator.active {
+            color: var(--olive);
+            font-weight: 600;
+        }
+
+        .step-indicator.done {
+            color: var(--olive-light);
+        }
+
+        .step-num {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: var(--cream-dark);
+            color: var(--text-light);
+            transition: all 0.3s;
+            flex-shrink: 0;
+        }
+
+        .step-indicator.active .step-num {
+            background: var(--olive);
+            color: var(--white);
+        }
+
+        .step-indicator.done .step-num {
+            background: var(--olive-light);
+            color: var(--white);
+        }
+
+        .step-connector {
+            width: 40px;
+            height: 2px;
+            background: var(--cream-dark);
+            flex-shrink: 0;
+        }
+
+        .step-connector.done {
+            background: var(--olive-light);
+        }
+
+        /* ─── MAIN CONTENT ─── */
+        .main-content {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 1rem 1.5rem 3rem;
+        }
+
+        .section {
+            display: none;
+            animation: fadeIn 0.4s ease;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ─── UPLOAD GRID ─── */
+        .upload-section-header {
+            text-align: center;
+            margin-bottom: 1.5rem;
+        }
+
+        .upload-section-header h2 {
+            font-family: 'Caveat', cursive;
+            font-size: 1.8rem;
+            color: var(--olive);
+        }
+
+        .upload-section-header p {
+            color: var(--text-mid);
+            font-size: 0.95rem;
+            margin-top: 0.25rem;
+        }
+
+        .upload-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 1rem;
+        }
+
+        .upload-card {
+            aspect-ratio: 694 / 568;
+            background: var(--olive);
+            border-radius: 10px;
+            position: relative;
+            cursor: pointer;
+            overflow: hidden;
+            transition: transform 0.2s, box-shadow 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .upload-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px var(--shadow-heavy);
+        }
+
+        .upload-card .month-label {
+            font-family: 'Caveat', cursive;
+            font-size: 1.1rem;
+            color: rgba(255,255,255,0.9);
+            font-weight: 600;
+            position: absolute;
+            bottom: 8px;
+            left: 10px;
+            z-index: 2;
+            text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+        }
+
+        .upload-card .upload-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.2s;
+        }
+
+        .upload-card:hover .upload-icon {
+            background: rgba(255,255,255,0.35);
+        }
+
+        .upload-card .upload-icon svg {
+            width: 18px;
+            height: 18px;
+            stroke: white;
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .upload-card.has-image .upload-icon {
+            display: none;
+        }
+
+        .upload-card img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .upload-card .remove-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.5);
+            border: none;
+            cursor: pointer;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 3;
+            transition: background 0.2s;
+        }
+
+        .upload-card.has-image .remove-btn {
+            display: flex;
+        }
+
+        .upload-card .remove-btn:hover {
+            background: rgba(196, 77, 77, 0.85);
+        }
+
+        .upload-card .remove-btn svg {
+            width: 14px;
+            height: 14px;
+            stroke: white;
+            fill: none;
+            stroke-width: 2.5;
+        }
+
+        .upload-card input[type="file"] {
+            display: none;
+        }
+
+        .upload-counter {
+            text-align: center;
+            margin-top: 1.25rem;
+            font-size: 0.95rem;
+            color: var(--text-mid);
+        }
+
+        .upload-counter strong {
+            color: var(--olive);
+        }
+
+        /* ─── PREVIEW SECTION ─── */
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 1rem;
+        }
+
+        .preview-card {
+            background: var(--white);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px var(--shadow);
+        }
+
+        .preview-card-image {
+            aspect-ratio: 694 / 568;
+            overflow: hidden;
+        }
+
+        .preview-card-image img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .preview-card-label {
+            padding: 0.6rem 0.75rem;
+            font-family: 'Caveat', cursive;
+            font-size: 1.15rem;
+            color: var(--olive);
+            font-weight: 600;
+        }
+
+        /* ─── EMAIL + PAY ─── */
+        .checkout-section {
+            max-width: 440px;
+            margin: 0 auto;
+            text-align: center;
+        }
+
+        .checkout-section h2 {
+            font-family: 'Caveat', cursive;
+            font-size: 1.8rem;
+            color: var(--olive);
+            margin-bottom: 0.5rem;
+        }
+
+        .checkout-section p {
+            color: var(--text-mid);
+            margin-bottom: 1.5rem;
+            line-height: 1.5;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+            text-align: left;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-mid);
+            margin-bottom: 0.4rem;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid var(--cream-dark);
+            border-radius: 8px;
+            font-family: 'Gabarito', sans-serif;
+            font-size: 1rem;
+            background: var(--white);
+            color: var(--text-dark);
+            transition: border-color 0.2s;
+            outline: none;
+        }
+
+        .form-group input:focus {
+            border-color: var(--olive);
+        }
+
+        .form-group input::placeholder {
+            color: var(--text-light);
+        }
+
+        .form-group .hint {
+            font-size: 0.8rem;
+            color: var(--text-light);
+            margin-top: 0.3rem;
+        }
+
+        /* ─── BUTTONS ─── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            padding: 0.85rem 2rem;
+            border-radius: 8px;
+            font-family: 'Gabarito', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: var(--olive);
+            color: var(--white);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            background: var(--olive-dark);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px var(--shadow-heavy);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--olive);
+            border: 2px solid var(--olive);
+        }
+
+        .btn-secondary:hover {
+            background: var(--olive);
+            color: var(--white);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 0.75rem;
+            justify-content: center;
+            margin-top: 1.5rem;
+            flex-wrap: wrap;
+        }
+
+        /* ─── PROGRESS / GENERATING ─── */
+        .generating-section {
+            text-align: center;
+            padding: 3rem 1rem;
+        }
+
+        .generating-section h2 {
+            font-family: 'Caveat', cursive;
+            font-size: 2rem;
+            color: var(--olive);
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            max-width: 360px;
+            height: 8px;
+            background: var(--cream-dark);
+            border-radius: 4px;
+            margin: 1.5rem auto;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--olive);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            font-size: 0.9rem;
+            color: var(--text-mid);
+        }
+
+        /* ─── DONE ─── */
+        .done-section {
+            text-align: center;
+            padding: 2rem 1rem;
+        }
+
+        .done-section h2 {
+            font-family: 'Caveat', cursive;
+            font-size: 2.4rem;
+            color: var(--olive);
+        }
+
+        .done-section p {
+            color: var(--text-mid);
+            margin-top: 0.5rem;
+            line-height: 1.5;
+        }
+
+        .done-checkmark {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: var(--olive);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.25rem;
+            animation: popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+
+        .done-checkmark svg {
+            width: 36px;
+            height: 36px;
+            stroke: white;
+            fill: none;
+            stroke-width: 3;
+        }
+
+        /* ─── ERROR ─── */
+        .error-msg {
+            background: #FFF0F0;
+            color: var(--error);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-top: 1rem;
+            display: none;
+        }
+
+        .error-msg.show {
+            display: block;
+        }
+
+        /* ─── FOOTER ─── */
+        .site-footer {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: var(--text-light);
+            font-size: 0.8rem;
+        }
+
+        /* ─── RESPONSIVE ─── */
+        @media (max-width: 600px) {
+            .upload-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 0.6rem;
+            }
+
+            .preview-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .step-indicator span:not(.step-num) {
+                display: none;
+            }
+
+            .btn-group {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+
+        /* ─── DRAG OVER STATE ─── */
+        .upload-card.drag-over {
+            outline: 3px dashed var(--white);
+            outline-offset: -6px;
+            background: var(--olive-dark);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <header class="site-header">
+        <h1>2026 Photo Calendar</h1>
+        <p>Upload 12 photos. Get a print-ready PDF calendar.</p>
+    </header>
+
+    <!-- STEPS -->
+    <div class="steps-bar">
+        <div class="step-indicator active" id="step-ind-1">
+            <span class="step-num">1</span>
+            <span>Upload</span>
+        </div>
+        <div class="step-connector" id="conn-1"></div>
+        <div class="step-indicator" id="step-ind-2">
+            <span class="step-num">2</span>
+            <span>Preview</span>
+        </div>
+        <div class="step-connector" id="conn-2"></div>
+        <div class="step-indicator" id="step-ind-3">
+            <span class="step-num">3</span>
+            <span>Download</span>
+        </div>
+    </div>
+
+    <!-- MAIN -->
+    <main class="main-content">
+
+        <!-- STEP 1: UPLOAD -->
+        <section class="section active" id="section-upload">
+            <div class="upload-section-header">
+                <h2>Pick your 12 photos</h2>
+                <p>One photo per month. Landscape works best.</p>
+            </div>
+            <div class="upload-grid" id="upload-grid"></div>
+            <div class="upload-counter" id="upload-counter">
+                <strong>0</strong> of 12 photos added
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" id="btn-to-preview" disabled>
+                    Preview Calendar
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- STEP 2: PREVIEW + EMAIL -->
+        <section class="section" id="section-preview">
+            <div class="upload-section-header">
+                <h2>Looking good!</h2>
+                <p>Here's your calendar lineup. Enter your email to generate the PDF.</p>
+            </div>
+            <div class="preview-grid" id="preview-grid"></div>
+            
+            <div class="checkout-section" style="margin-top: 2rem;">
+                <div class="form-group">
+                    <label for="email-input">Your email</label>
+                    <input type="email" id="email-input" placeholder="you@example.com" autocomplete="email">
+                    <div class="hint">We'll send you a copy + let you know about future products.</div>
+                </div>
+                <div class="error-msg" id="email-error"></div>
+            </div>
+            
+            <div class="btn-group">
+                <button class="btn btn-secondary" id="btn-back-upload">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
+                    Back
+                </button>
+                <button class="btn btn-primary" id="btn-generate">
+                    Generate My Calendar
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                </button>
+            </div>
+        </section>
+
+        <!-- STEP 3: GENERATING -->
+        <section class="section" id="section-generating">
+            <div class="generating-section">
+                <h2>Building your calendar...</h2>
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progress-bar"></div>
+                </div>
+                <p class="progress-text" id="progress-text">Preparing template...</p>
+            </div>
+        </section>
+
+        <!-- STEP 4: DONE -->
+        <section class="section" id="section-done">
+            <div class="done-section">
+                <div class="done-checkmark">
+                    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                </div>
+                <h2>Your calendar is ready!</h2>
+                <p>The PDF has been downloaded. Check your email for a copy too.</p>
+                <div class="btn-group" style="margin-top: 1.5rem;">
+                    <button class="btn btn-primary" id="btn-download-again">
+                        Download Again
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </button>
+                    <button class="btn btn-secondary" id="btn-start-over">Make Another</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer class="site-footer">
+        Made with cat-like precision.
+    </footer>
+
+    <script>
+    // ─────────────────────────────────────────────
+    // CONFIG
+    // ─────────────────────────────────────────────
+    const MONTHS = [
+        'January','February','March','April','May','June',
+        'July','August','September','October','November','December'
+    ];
+
+    // Template PDF coordinates (in PDF points)
+    const PAGE_W = 752.68;
+    const PAGE_H = 1063.57;
+    const IMG_RECT = { x: 29.013, y: 459.614, w: 694.653, h: 568.187 };
+
+    // Template PDF URL (will be hosted alongside the site)
+    const TEMPLATE_URL = '/2026_template.pdf';
+
+    // Supabase config (to be filled in)
+    const SUPABASE_URL = 'https://eanqljtercjlewwrjhix.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhbnFsanRlcmNqbGV3d3JqaGl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NzYzNzEsImV4cCI6MjA4OTE1MjM3MX0.aqSq-GbMBV6iT0qmtzkxoCyJFgELQX-k_dtxHH_XuTw
+';
+
+    // ─────────────────────────────────────────────
+    // STATE
+    // ─────────────────────────────────────────────
+    const photos = new Array(12).fill(null); // File objects
+    const photoURLs = new Array(12).fill(null); // Object URLs for preview
+    let generatedPdfBytes = null;
+
+    // ─────────────────────────────────────────────
+    // BUILD UPLOAD GRID
+    // ─────────────────────────────────────────────
+    const uploadGrid = document.getElementById('upload-grid');
+    
+    MONTHS.forEach((month, i) => {
+        const card = document.createElement('div');
+        card.className = 'upload-card';
+        card.dataset.month = i;
+        card.innerHTML = `
+            <div class="upload-icon">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+            </div>
+            <span class="month-label">${month}</span>
+            <button class="remove-btn" title="Remove photo">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+            <input type="file" accept="image/jpeg,image/png,image/webp" id="file-${i}">
+        `;
+        uploadGrid.appendChild(card);
+
+        // Click to upload
+        card.addEventListener('click', (e) => {
+            if (e.target.closest('.remove-btn')) return;
+            document.getElementById(`file-${i}`).click();
+        });
+
+        // File selected
+        document.getElementById(`file-${i}`).addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            setPhoto(i, file);
+        });
+
+        // Remove
+        card.querySelector('.remove-btn').addEventListener('click', (e) => {
+            e.stopPropagation();
+            removePhoto(i);
+        });
+
+        // Drag and drop
+        card.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            card.classList.add('drag-over');
+        });
+        card.addEventListener('dragleave', () => {
+            card.classList.remove('drag-over');
+        });
+        card.addEventListener('drop', (e) => {
+            e.preventDefault();
+            card.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                setPhoto(i, file);
+            }
+        });
+    });
+
+    function setPhoto(index, file) {
+        photos[index] = file;
+        if (photoURLs[index]) URL.revokeObjectURL(photoURLs[index]);
+        photoURLs[index] = URL.createObjectURL(file);
+        
+        const card = uploadGrid.children[index];
+        let img = card.querySelector('img');
+        if (!img) {
+            img = document.createElement('img');
+            card.insertBefore(img, card.firstChild);
+        }
+        img.src = photoURLs[index];
+        card.classList.add('has-image');
+        updateCounter();
+    }
+
+    function removePhoto(index) {
+        photos[index] = null;
+        if (photoURLs[index]) {
+            URL.revokeObjectURL(photoURLs[index]);
+            photoURLs[index] = null;
+        }
+        const card = uploadGrid.children[index];
+        const img = card.querySelector('img');
+        if (img) img.remove();
+        card.classList.remove('has-image');
+        document.getElementById(`file-${index}`).value = '';
+        updateCounter();
+    }
+
+    function updateCounter() {
+        const count = photos.filter(p => p !== null).length;
+        document.getElementById('upload-counter').innerHTML = `<strong>${count}</strong> of 12 photos added`;
+        document.getElementById('btn-to-preview').disabled = count < 12;
+    }
+
+    // ─────────────────────────────────────────────
+    // NAVIGATION
+    // ─────────────────────────────────────────────
+    function showSection(id) {
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        
+        // Update step indicators
+        const stepMap = {
+            'section-upload': 1,
+            'section-preview': 2,
+            'section-generating': 3,
+            'section-done': 3
+        };
+        const currentStep = stepMap[id] || 1;
+        
+        for (let i = 1; i <= 3; i++) {
+            const ind = document.getElementById(`step-ind-${i}`);
+            ind.classList.remove('active', 'done');
+            if (i < currentStep) ind.classList.add('done');
+            else if (i === currentStep) ind.classList.add('active');
+        }
+        for (let i = 1; i <= 2; i++) {
+            const conn = document.getElementById(`conn-${i}`);
+            conn.classList.toggle('done', i < currentStep);
+        }
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // Button handlers
+    document.getElementById('btn-to-preview').addEventListener('click', () => {
+        buildPreview();
+        showSection('section-preview');
+    });
+
+    document.getElementById('btn-back-upload').addEventListener('click', () => {
+        showSection('section-upload');
+    });
+
+    document.getElementById('btn-generate').addEventListener('click', () => {
+        generateCalendar();
+    });
+
+    document.getElementById('btn-download-again').addEventListener('click', () => {
+        if (generatedPdfBytes) downloadPdf(generatedPdfBytes);
+    });
+
+    document.getElementById('btn-start-over').addEventListener('click', () => {
+        // Reset everything
+        for (let i = 0; i < 12; i++) removePhoto(i);
+        document.getElementById('email-input').value = '';
+        generatedPdfBytes = null;
+        showSection('section-upload');
+    });
+
+    // ─────────────────────────────────────────────
+    // PREVIEW
+    // ─────────────────────────────────────────────
+    function buildPreview() {
+        const grid = document.getElementById('preview-grid');
+        grid.innerHTML = '';
+        MONTHS.forEach((month, i) => {
+            const card = document.createElement('div');
+            card.className = 'preview-card';
+            card.innerHTML = `
+                <div class="preview-card-image">
+                    <img src="${photoURLs[i]}" alt="${month}">
+                </div>
+                <div class="preview-card-label">${month}</div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    // ─────────────────────────────────────────────
+    // PDF GENERATION (client-side with pdf-lib)
+    // ─────────────────────────────────────────────
+    async function generateCalendar() {
+        const email = document.getElementById('email-input').value.trim();
+        const errorEl = document.getElementById('email-error');
+        
+        if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+            errorEl.textContent = 'Please enter a valid email address.';
+            errorEl.classList.add('show');
+            return;
+        }
+        errorEl.classList.remove('show');
+
+        showSection('section-generating');
+        const progressBar = document.getElementById('progress-bar');
+        const progressText = document.getElementById('progress-text');
+
+        try {
+            // 1. Load template PDF
+            progressText.textContent = 'Loading template...';
+            progressBar.style.width = '5%';
+            
+            const templateBytes = await fetch(TEMPLATE_URL).then(r => r.arrayBuffer());
+            const pdfDoc = await PDFLib.PDFDocument.load(templateBytes);
+            
+            progressBar.style.width = '10%';
+
+            // 2. Embed each photo and composite onto pages
+            const pages = pdfDoc.getPages();
+            
+            for (let i = 0; i < 12; i++) {
+                progressText.textContent = `Adding ${MONTHS[i]} photo...`;
+                progressBar.style.width = `${10 + (i + 1) * 7}%`;
+                
+                const file = photos[i];
+                const page = pages[i]; // Pages 0-11 are Jan-Dec
+                
+                // Get image dimensions via browser, crop to rect aspect, embed
+                const { width: origW, height: origH } = await getImageDimensions(file);
+                
+                const rectAspect = IMG_RECT.w / IMG_RECT.h;
+                const origAspect = origW / origH;
+                
+                // Calculate center-crop to match rect aspect ratio
+                let cropX, cropY, cropW, cropH;
+                if (origAspect > rectAspect) {
+                    // Image wider — crop sides
+                    cropH = origH;
+                    cropW = Math.round(origH * rectAspect);
+                    cropX = Math.round((origW - cropW) / 2);
+                    cropY = 0;
+                } else {
+                    // Image taller — crop top/bottom
+                    cropW = origW;
+                    cropH = Math.round(origW / rectAspect);
+                    cropX = 0;
+                    cropY = Math.round((origH - cropH) / 2);
+                }
+                
+                // Crop and convert to JPEG, then embed in PDF
+                const croppedBytes = await cropImageToRect(file, cropX, cropY, cropW, cropH);
+                const croppedImage = await pdfDoc.embedJpg(croppedBytes);
+                
+                // Draw at exact rect position/size — perfect fit, no bleed
+                page.drawImage(croppedImage, {
+                    x: IMG_RECT.x,
+                    y: IMG_RECT.y,
+                    width: IMG_RECT.w,
+                    height: IMG_RECT.h,
+                });
+                
+                // Let UI update
+                await new Promise(r => setTimeout(r, 50));
+            }
+            
+            // 3. Save PDF
+            progressText.textContent = 'Finalizing PDF...';
+            progressBar.style.width = '95%';
+            
+            generatedPdfBytes = await pdfDoc.save();
+            
+            progressBar.style.width = '100%';
+            progressText.textContent = 'Done!';
+
+            // 4. Save email to Supabase (non-blocking)
+            saveEmail(email).catch(err => console.warn('Email save failed:', err));
+
+            // 5. Download
+            downloadPdf(generatedPdfBytes);
+
+            // 6. Show done
+            setTimeout(() => showSection('section-done'), 500);
+
+        } catch (err) {
+            console.error('PDF generation failed:', err);
+            progressText.textContent = `Error: ${err.message}. Please try again.`;
+            progressBar.style.width = '0%';
+            progressBar.style.background = 'var(--error)';
+            
+            // Show retry button
+            setTimeout(() => {
+                showSection('section-preview');
+                const errorEl = document.getElementById('email-error');
+                errorEl.textContent = 'PDF generation failed. Please try again. If the issue persists, try using JPEG photos.';
+                errorEl.classList.add('show');
+            }, 2000);
+        }
+    }
+
+    // Get image dimensions without fully loading into memory
+    function getImageDimensions(file) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                resolve({ width: img.naturalWidth, height: img.naturalHeight });
+            };
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                reject(new Error('Failed to load image'));
+            };
+            img.src = url;
+        });
+    }
+
+    // Crop an image file to a specific region and return as JPEG Uint8Array
+    function cropImageToRect(file, cropX, cropY, cropW, cropH) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            const url = URL.createObjectURL(file);
+            img.onload = () => {
+                URL.revokeObjectURL(url);
+                const canvas = document.createElement('canvas');
+                // Output at reasonable resolution for print (aim for ~200-250 DPI)
+                // Rect is ~9.65" × 7.89", so ~2400 × 1970 px at 250 DPI
+                const maxDim = 2400;
+                const scale = Math.min(maxDim / cropW, maxDim / cropH, 1);
+                canvas.width = Math.round(cropW * scale);
+                canvas.height = Math.round(cropH * scale);
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 
+                    cropX, cropY, cropW, cropH,  // source rect
+                    0, 0, canvas.width, canvas.height  // dest rect
+                );
+                canvas.toBlob(blob => {
+                    if (!blob) return reject(new Error('Canvas toBlob failed'));
+                    blob.arrayBuffer().then(buf => resolve(new Uint8Array(buf)));
+                }, 'image/jpeg', 0.88);
+            };
+            img.onerror = () => {
+                URL.revokeObjectURL(url);
+                reject(new Error('Image load failed'));
+            };
+            img.src = url;
+        });
+    }
+
+    // Download the PDF
+    function downloadPdf(bytes) {
+        const blob = new Blob([bytes], { type: 'application/pdf' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '2026-photo-calendar.pdf';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }
+
+    // Save email to Supabase
+    async function saveEmail(email) {
+        // This will work once Supabase is configured
+        if (SUPABASE_URL.includes('YOUR_PROJECT')) {
+            console.log('Supabase not configured. Email:', email);
+            return;
+        }
+        
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/calendar_emails`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                'Prefer': 'return=minimal'
+            },
+            body: JSON.stringify({
+                email: email,
+                created_at: new Date().toISOString()
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`Supabase error: ${response.status}`);
+        }
+    }
+    </script>
+
+</body>
+</html>
