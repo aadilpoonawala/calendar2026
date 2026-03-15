@@ -13,6 +13,9 @@
     
     <!-- pdf-lib for client-side PDF generation -->
     <script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+    
+    <!-- Razorpay Checkout -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 
     <style>
         :root {
@@ -348,6 +351,32 @@
             font-weight: 600;
         }
 
+        /* ─── PRICE TAG ─── */
+        .price-tag {
+            background: var(--white);
+            border: 2px solid var(--olive);
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .price-amount {
+            font-family: 'Caveat', cursive;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--olive);
+            line-height: 1;
+        }
+
+        .price-desc {
+            font-size: 0.9rem;
+            color: var(--text-mid);
+            line-height: 1.3;
+        }
+
         /* ─── EMAIL + PAY ─── */
         .checkout-section {
             max-width: 440px;
@@ -607,7 +636,7 @@
         <div class="step-connector" id="conn-1"></div>
         <div class="step-indicator" id="step-ind-2">
             <span class="step-num">2</span>
-            <span>Preview</span>
+            <span>Pay</span>
         </div>
         <div class="step-connector" id="conn-2"></div>
         <div class="step-indicator" id="step-ind-3">
@@ -637,19 +666,24 @@
             </div>
         </section>
 
-        <!-- STEP 2: PREVIEW + EMAIL -->
+        <!-- STEP 2: PREVIEW + PAY -->
         <section class="section" id="section-preview">
             <div class="upload-section-header">
                 <h2>Looking good!</h2>
-                <p>Here's your calendar lineup. Enter your email to generate the PDF.</p>
+                <p>Here's your calendar lineup.</p>
             </div>
             <div class="preview-grid" id="preview-grid"></div>
             
             <div class="checkout-section" style="margin-top: 2rem;">
+                <div class="price-tag">
+                    <span class="price-amount">₹149</span>
+                    <span class="price-desc">Print-ready PDF, delivered instantly</span>
+                </div>
+                
                 <div class="form-group">
                     <label for="email-input">Your email</label>
                     <input type="email" id="email-input" placeholder="you@example.com" autocomplete="email">
-                    <div class="hint">We'll send you a copy + let you know about future products.</div>
+                    <div class="hint">We'll send you a download link + future product updates.</div>
                 </div>
                 <div class="error-msg" id="email-error"></div>
             </div>
@@ -659,9 +693,9 @@
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5"/><path d="m12 19-7-7 7-7"/></svg>
                     Back
                 </button>
-                <button class="btn btn-primary" id="btn-generate">
-                    Generate My Calendar
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                <button class="btn btn-primary" id="btn-pay">
+                    Pay ₹149 & Download
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
                 </button>
             </div>
         </section>
@@ -720,6 +754,11 @@
     // Supabase config (to be filled in)
     const SUPABASE_URL = 'https://YOUR_PROJECT.supabase.co';
     const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY';
+
+    // Razorpay config
+    const RAZORPAY_KEY = 'rzp_live_SRZ0lLHqbtOvr5';
+    const PRICE_PAISE = 14900; // ₹149 in paise
+    const PRICE_DISPLAY = '₹149';
 
     // ─────────────────────────────────────────────
     // STATE
@@ -870,8 +909,45 @@
         showSection('section-upload');
     });
 
-    document.getElementById('btn-generate').addEventListener('click', () => {
-        generateCalendar();
+    document.getElementById('btn-pay').addEventListener('click', () => {
+        const email = document.getElementById('email-input').value.trim();
+        const errorEl = document.getElementById('email-error');
+        
+        if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
+            errorEl.textContent = 'Please enter a valid email address.';
+            errorEl.classList.add('show');
+            return;
+        }
+        errorEl.classList.remove('show');
+        
+        // Open Razorpay Checkout
+        const options = {
+            key: RAZORPAY_KEY,
+            amount: PRICE_PAISE,
+            currency: 'INR',
+            name: '2026 Photo Calendar',
+            description: 'Print-ready PDF calendar with your photos',
+            prefill: {
+                email: email,
+            },
+            theme: {
+                color: '#768E4E',
+            },
+            handler: function(response) {
+                // Payment successful — generate the calendar
+                console.log('Payment ID:', response.razorpay_payment_id);
+                generateCalendar(email, response.razorpay_payment_id);
+            },
+            modal: {
+                ondismiss: function() {
+                    // User closed the payment modal — do nothing
+                    console.log('Payment cancelled');
+                }
+            }
+        };
+        
+        const rzp = new Razorpay(options);
+        rzp.open();
     });
 
     document.getElementById('btn-download-again').addEventListener('click', () => {
@@ -908,17 +984,7 @@
     // ─────────────────────────────────────────────
     // PDF GENERATION (client-side with pdf-lib)
     // ─────────────────────────────────────────────
-    async function generateCalendar() {
-        const email = document.getElementById('email-input').value.trim();
-        const errorEl = document.getElementById('email-error');
-        
-        if (!email || !email.match(/^[^\s@]+@[^\s@]+\.[^\s@]+$/)) {
-            errorEl.textContent = 'Please enter a valid email address.';
-            errorEl.classList.add('show');
-            return;
-        }
-        errorEl.classList.remove('show');
-
+    async function generateCalendar(email, paymentId) {
         showSection('section-generating');
         const progressBar = document.getElementById('progress-bar');
         const progressText = document.getElementById('progress-text');
@@ -990,8 +1056,8 @@
             progressBar.style.width = '100%';
             progressText.textContent = 'Done!';
 
-            // 4. Save email to Supabase (non-blocking)
-            saveEmail(email).catch(err => console.warn('Email save failed:', err));
+            // 4. Save email + payment to Supabase (non-blocking)
+            saveEmail(email, paymentId).catch(err => console.warn('Email save failed:', err));
 
             // 5. Download
             downloadPdf(generatedPdfBytes);
@@ -1005,12 +1071,20 @@
             progressBar.style.width = '0%';
             progressBar.style.background = 'var(--error)';
             
-            // Show retry button
+            // Show retry — payment already processed, just retry generation
             setTimeout(() => {
                 showSection('section-preview');
                 const errorEl = document.getElementById('email-error');
-                errorEl.textContent = 'PDF generation failed. Please try again. If the issue persists, try using JPEG photos.';
+                errorEl.textContent = 'PDF generation hit a snag — your payment is safe. Click the button to try again.';
                 errorEl.classList.add('show');
+                
+                // Change button to retry (skip payment)
+                const payBtn = document.getElementById('btn-pay');
+                payBtn.textContent = 'Retry Download';
+                payBtn.onclick = () => {
+                    errorEl.classList.remove('show');
+                    generateCalendar(email, paymentId);
+                };
             }, 2000);
         }
     }
@@ -1078,10 +1152,10 @@
     }
 
     // Save email to Supabase
-    async function saveEmail(email) {
+    async function saveEmail(email, paymentId) {
         // This will work once Supabase is configured
         if (SUPABASE_URL.includes('YOUR_PROJECT')) {
-            console.log('Supabase not configured. Email:', email);
+            console.log('Supabase not configured. Email:', email, 'Payment:', paymentId);
             return;
         }
         
@@ -1095,6 +1169,7 @@
             },
             body: JSON.stringify({
                 email: email,
+                payment_id: paymentId || null,
                 created_at: new Date().toISOString()
             })
         });
