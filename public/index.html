@@ -195,17 +195,8 @@
             border-radius: 10px;
             background: var(--olive);
             transition: transform 0.2s, box-shadow 0.2s;
-            /* Aspect ratio with padding-bottom fallback */
-            aspect-ratio: 694 / 568;
-        }
-
-        /* Fallback for browsers where aspect-ratio doesn't work in grid */
-        @supports not (aspect-ratio: 1) {
-            .upload-card::before {
-                content: '';
-                display: block;
-                padding-bottom: 81.8%; /* 568/694 */
-            }
+            /* Bulletproof aspect ratio via padding */
+            padding-bottom: 81.8%; /* 568/694 = 0.818 */
         }
 
         .upload-card-inner {
