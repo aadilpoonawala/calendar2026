@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Custom 2026 Calendars — taprimasti.com</title>
-    <meta name="description" content="Put what you love on the months to come. Upload 12 photos, get a print-ready 2026 calendar PDF. Makes for an adorable gift too 🤪">
+    <meta name="description" content="Put what you love on the months to come. Upload 12 photos, get a print-ready 2026 calendar PDF. Makes for an adorable gift too.">
     
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -351,6 +351,52 @@
             font-weight: 600;
         }
 
+        /* ─── COLOUR PICKER ─── */
+        .colour-picker {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            margin-bottom: 1.25rem;
+            flex-wrap: wrap;
+        }
+
+        .colour-picker-label {
+            font-size: 0.9rem;
+            color: var(--text-mid);
+            font-weight: 500;
+        }
+
+        .colour-options {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .colour-swatch {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 3px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            padding: 0;
+        }
+
+        .colour-swatch.active {
+            border-color: var(--text-dark);
+            transform: scale(1.15);
+        }
+
+        .colour-swatch:hover:not(:disabled) {
+            transform: scale(1.1);
+        }
+
+        .colour-coming-soon {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            font-style: italic;
+        }
+
         /* ─── PRICE TAG ─── */
         .price-tag {
             background: var(--white);
@@ -646,7 +692,7 @@
     <!-- HEADER -->
     <header class="site-header">
         <h1>Custom 2026 Calendars</h1>
-        <p>So what if a couple months have swept by, put what you love on the months to come.<br>Makes for an adorable gift too 🤪</p>
+        <p>So what if a couple months have swept by, put what you love on the months to come.<br>Makes for an adorable gift too</p>
     </header>
 
     <!-- STEPS -->
@@ -676,6 +722,27 @@
                 <h2>Pick Your Pictures</h2>
                 <p>One photo per month. Landscape works best.</p>
             </div>
+            
+            <!-- Colour picker -->
+            <div class="colour-picker" id="colour-picker">
+                <span class="colour-picker-label">Calendar colour:</span>
+                <div class="colour-options">
+                    <button class="colour-swatch active" data-colour="green" title="Forest Green" style="background: #447A5F;"></button>
+                    <button class="colour-swatch" data-colour="pink" title="Rose Pink" style="background: #EB6A92;"></button>
+                    <button class="colour-swatch" data-colour="purple" title="Violet" style="background: #7956CD;"></button>
+                    <button class="colour-swatch" data-colour="orange" title="Tangerine" style="background: #FD6E2C;"></button>
+                    <button class="colour-swatch" data-colour="blue" title="Royal Blue" style="background: #2853AC;"></button>
+                </div>
+            </div>
+            
+            <!-- Bulk upload button -->
+            <div style="text-align: center; margin-bottom: 1rem;">
+                <button class="btn btn-secondary" id="btn-bulk-upload" style="font-size: 0.9rem; padding: 0.6rem 1.25rem;">
+                    Select All 12 Photos At Once
+                </button>
+                <input type="file" id="bulk-file-input" accept="image/jpeg,image/png,image/webp" multiple style="display: none;">
+            </div>
+            
             <div class="upload-grid" id="upload-grid"></div>
             <div class="upload-counter" id="upload-counter">
                 <strong>0</strong> of 12 photos added
@@ -741,8 +808,8 @@
                 <div class="done-checkmark">
                     <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
                 </div>
-                <h2>Your calendar is ready ❤️‍🔥</h2>
-                <p>The PDF has been downloaded. Share this with a friend for a digital cookie 🍪</p>
+                <h2>Your calendar is ready!</h2>
+                <p>The PDF has been downloaded. Check your email for a copy too.</p>
                 <div class="btn-group" style="margin-top: 1.5rem;">
                     <button class="btn btn-primary" id="btn-download-again">
                         Download Again
@@ -777,7 +844,8 @@
 
     // Supabase config (to be filled in)
     const SUPABASE_URL = 'https://eanqljtercjlewwrjhix.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhbnFsanRlcmNqbGV3d3JqaGl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NzYzNzEsImV4cCI6MjA4OTE1MjM3MX0.aqSq-GbMBV6iT0qmtzkxoCyJFgELQX-k_dtxHH_XuTw';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhbnFsanRlcmNqbGV3d3JqaGl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NzYzNzEsImV4cCI6MjA4OTE1MjM3MX0.aqSq-GbMBV6iT0qmtzkxoCyJFgELQX-k_dtxHH_XuTw
+';
 
     // Razorpay config
     const RAZORPAY_KEY = 'rzp_live_SRZ0lLHqbtOvr5';
@@ -892,6 +960,61 @@
         document.getElementById('upload-counter').innerHTML = `<strong>${count}</strong> of 12 photos added`;
         document.getElementById('btn-to-preview').disabled = count < 12;
     }
+
+    // ─────────────────────────────────────────────
+    // BULK UPLOAD
+    // ─────────────────────────────────────────────
+    document.getElementById('btn-bulk-upload').addEventListener('click', () => {
+        document.getElementById('bulk-file-input').click();
+    });
+
+    document.getElementById('bulk-file-input').addEventListener('change', (e) => {
+        const files = Array.from(e.target.files);
+        if (files.length === 0) return;
+        
+        // Assign files to empty slots in order (Jan → Dec)
+        let fileIdx = 0;
+        for (let i = 0; i < 12 && fileIdx < files.length; i++) {
+            if (photos[i] === null) {
+                setPhoto(i, files[fileIdx]);
+                fileIdx++;
+            }
+        }
+        
+        // If there are still files left and some slots were already filled,
+        // overwrite from the beginning
+        if (fileIdx < files.length) {
+            for (let i = 0; i < 12 && fileIdx < files.length; i++) {
+                setPhoto(i, files[fileIdx]);
+                fileIdx++;
+            }
+        }
+        
+        // Reset the input so the same files can be re-selected
+        e.target.value = '';
+    });
+
+    // ─────────────────────────────────────────────
+    // COLOUR PICKER
+    // ─────────────────────────────────────────────
+    let selectedColour = 'green';
+    
+    // Template URLs per colour
+    const TEMPLATE_URLS = {
+        green: '/Template_01.pdf',
+        pink: '/Template_02.pdf',
+        purple: '/Template_03.pdf',
+        orange: '/Template_04.pdf',
+        blue: '/Template_05.pdf',
+    };
+
+    document.querySelectorAll('.colour-swatch:not(:disabled)').forEach(swatch => {
+        swatch.addEventListener('click', () => {
+            document.querySelectorAll('.colour-swatch').forEach(s => s.classList.remove('active'));
+            swatch.classList.add('active');
+            selectedColour = swatch.dataset.colour;
+        });
+    });
 
     // ─────────────────────────────────────────────
     // NAVIGATION
@@ -1059,7 +1182,8 @@
             progressText.textContent = 'Loading template...';
             progressBar.style.width = '5%';
             
-            const templateBytes = await fetch(TEMPLATE_URL).then(r => r.arrayBuffer());
+            const templateUrl = TEMPLATE_URLS[selectedColour] || TEMPLATE_URL;
+            const templateBytes = await fetch(templateUrl).then(r => r.arrayBuffer());
             const pdfDoc = await PDFLib.PDFDocument.load(templateBytes);
             
             progressBar.style.width = '10%';
