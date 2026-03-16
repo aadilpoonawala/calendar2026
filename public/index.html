@@ -344,6 +344,55 @@
             font-weight: 600;
         }
 
+        /* ─── SPECIAL DATES ─── */
+        .special-date-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            margin-bottom: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .special-date-row select,
+        .special-date-row input[type="text"] {
+            padding: 0.5rem 0.6rem;
+            border: 2px solid var(--cream-dark);
+            border-radius: 6px;
+            font-family: 'Gabarito', sans-serif;
+            font-size: 0.85rem;
+            background: var(--white);
+            color: var(--text-dark);
+            outline: none;
+        }
+
+        .special-date-row select:focus,
+        .special-date-row input:focus {
+            border-color: var(--olive);
+        }
+
+        .special-date-row select {
+            min-width: 100px;
+        }
+
+        .special-date-row input[type="text"] {
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .special-date-row .remove-date-btn {
+            background: none;
+            border: none;
+            color: var(--text-light);
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 0.25rem;
+            line-height: 1;
+        }
+
+        .special-date-row .remove-date-btn:hover {
+            color: var(--error);
+        }
+
         /* ─── COLOUR PICKER ─── */
         .colour-picker {
             display: flex;
@@ -759,6 +808,18 @@
                 Drag and drop to swap photos between months
             </div>
             
+            <!-- Special Dates -->
+            <div class="special-dates-section" style="margin-top: 1.5rem;">
+                <div class="upload-section-header" style="margin-bottom: 0.75rem;">
+                    <h2 style="font-size: 1.4rem;">Mark Special Dates</h2>
+                    <p style="font-size: 0.9rem;">Birthdays, anniversaries — they'll get a little heart on the calendar</p>
+                </div>
+                <div id="special-dates-list"></div>
+                <button type="button" class="btn btn-secondary" id="btn-add-date" style="font-size: 0.85rem; padding: 0.5rem 1rem; margin-top: 0.5rem;">
+                    + Add a date
+                </button>
+            </div>
+            
             <div class="checkout-section" style="margin-top: 2rem;">
                 <div class="price-tag">
                     <span class="price-amount">₹149</span>
@@ -836,11 +897,11 @@
     const TEMPLATE_URL = '/2026_template.pdf';
 
     // Supabase config (to be filled in)
-    const SUPABASE_URL = 'https://eanqljtercjlewwrjhix.supabase.co'';
+    const SUPABASE_URL = 'https://eanqljtercjlewwrjhix.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhbnFsanRlcmNqbGV3d3JqaGl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NzYzNzEsImV4cCI6MjA4OTE1MjM3MX0.aqSq-GbMBV6iT0qmtzkxoCyJFgELQX-k_dtxHH_XuTw';
 
     // Razorpay config
-    const RAZORPAY_KEY = 'rzp_live_SRZ0lLHqbtOvr5';
+    const RAZORPAY_KEY = 'rzp_live_SRZ0lLHqbtOvr5'; // Replace with your key from Razorpay Dashboard → Settings → API Keys
     const PRICE_PAISE = 14900; // ₹149 in paise
     const PRICE_DISPLAY = '₹149';
 
@@ -850,6 +911,46 @@
     const photos = new Array(12).fill(null); // File objects
     const photoURLs = new Array(12).fill(null); // Object URLs for preview
     let generatedPdfBytes = null;
+    const specialDates = []; // Array of {month, day, label}
+
+    // ─────────────────────────────────────────────
+    // CALENDAR GRID DATA (2026)
+    // ─────────────────────────────────────────────
+    // Column X centers (Sun=0 through Sat=6) in PDF points
+    const COL_CENTERS = [298.3, 363.9, 429.1, 494.2, 559.4, 624.6, 690.3];
+    // Row Y centers (week 1-6) in pdfplumber coords (from top)
+    const ROW_CENTERS_FROM_TOP = [678.4, 743.6, 808.8, 874.0, 939.2, 1004.4];
+    // Convert to PDF coords (from bottom)
+    const ROW_CENTERS = ROW_CENTERS_FROM_TOP.map(y => PAGE_H - y);
+    // Cell size for heart drawing
+    const CELL_SIZE = 50; // approximate cell diameter for the heart
+
+    // 2026 calendar: day-of-week for the 1st of each month (0=Sun, 1=Mon, ..., 6=Sat)
+    // and days in each month
+    const MONTH_DATA = [
+        { startDay: 4, days: 31 },  // Jan 2026: 1st is Thursday
+        { startDay: 0, days: 28 },  // Feb
+        { startDay: 0, days: 31 },  // Mar
+        { startDay: 3, days: 30 },  // Apr
+        { startDay: 5, days: 31 },  // May
+        { startDay: 1, days: 30 },  // Jun
+        { startDay: 3, days: 31 },  // Jul
+        { startDay: 6, days: 31 },  // Aug
+        { startDay: 2, days: 30 },  // Sep
+        { startDay: 4, days: 31 },  // Oct
+        { startDay: 0, days: 30 },  // Nov
+        { startDay: 2, days: 31 },  // Dec
+    ];
+
+    // Get the grid cell (col, row) for a given day in a given month
+    function getDateCell(monthIdx, day) {
+        const { startDay } = MONTH_DATA[monthIdx];
+        const cellIndex = startDay + (day - 1); // 0-indexed position in the grid
+        const col = cellIndex % 7;
+        const row = Math.floor(cellIndex / 7);
+        if (row >= 6) return null; // overflow row
+        return { col, row, x: COL_CENTERS[col], y: ROW_CENTERS[row] };
+    }
 
     // ─────────────────────────────────────────────
     // BUILD UPLOAD GRID
@@ -961,25 +1062,19 @@
     });
 
     document.getElementById('bulk-file-input').addEventListener('change', (e) => {
-        const files = Array.from(e.target.files);
+        let files = Array.from(e.target.files);
         if (files.length === 0) return;
         
-        // Assign files to empty slots in order (Jan → Dec)
-        let fileIdx = 0;
-        for (let i = 0; i < 12 && fileIdx < files.length; i++) {
-            if (photos[i] === null) {
-                setPhoto(i, files[fileIdx]);
-                fileIdx++;
-            }
+        // Cap at 12 files
+        if (files.length > 12) {
+            alert('Please select exactly 12 photos — one for each month.');
+            e.target.value = '';
+            return;
         }
         
-        // If there are still files left and some slots were already filled,
-        // overwrite from the beginning
-        if (fileIdx < files.length) {
-            for (let i = 0; i < 12 && fileIdx < files.length; i++) {
-                setPhoto(i, files[fileIdx]);
-                fileIdx++;
-            }
+        // Assign files to slots in order (Jan → Dec)
+        for (let i = 0; i < Math.min(files.length, 12); i++) {
+            setPhoto(i, files[i]);
         }
         
         // Reset the input so the same files can be re-selected
@@ -1007,6 +1102,90 @@
             selectedColour = swatch.dataset.colour;
         });
     });
+
+    // ─────────────────────────────────────────────
+    // SPECIAL DATES UI
+    // ─────────────────────────────────────────────
+    document.getElementById('btn-add-date').addEventListener('click', () => {
+        addSpecialDateRow();
+    });
+
+    function addSpecialDateRow(monthVal, dayVal) {
+        const list = document.getElementById('special-dates-list');
+        const row = document.createElement('div');
+        row.className = 'special-date-row';
+        
+        // Heart icon
+        const heart = document.createElement('span');
+        heart.textContent = '❤️';
+        heart.style.fontSize = '1.1rem';
+        
+        // Month dropdown
+        const monthSelect = document.createElement('select');
+        MONTHS.forEach((m, i) => {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = m;
+            if (monthVal !== undefined && i === monthVal) opt.selected = true;
+            monthSelect.appendChild(opt);
+        });
+        
+        // Day dropdown
+        const daySelect = document.createElement('select');
+        const initMonth = monthVal !== undefined ? monthVal : 0;
+        const maxDays = MONTH_DATA[initMonth].days;
+        for (let d = 1; d <= maxDays; d++) {
+            const opt = document.createElement('option');
+            opt.value = d;
+            opt.textContent = d;
+            if (dayVal !== undefined && d === dayVal) opt.selected = true;
+            daySelect.appendChild(opt);
+        }
+        
+        // Update day options when month changes
+        monthSelect.addEventListener('change', () => {
+            const newMax = MONTH_DATA[parseInt(monthSelect.value)].days;
+            const currentDay = parseInt(daySelect.value);
+            daySelect.innerHTML = '';
+            for (let d = 1; d <= newMax; d++) {
+                const opt = document.createElement('option');
+                opt.value = d;
+                opt.textContent = d;
+                if (d === Math.min(currentDay, newMax)) opt.selected = true;
+                daySelect.appendChild(opt);
+            }
+        });
+        
+        // Remove button
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'remove-date-btn';
+        removeBtn.textContent = '×';
+        removeBtn.addEventListener('click', () => {
+            row.remove();
+        });
+        
+        row.appendChild(heart);
+        row.appendChild(monthSelect);
+        row.appendChild(daySelect);
+        row.appendChild(removeBtn);
+        list.appendChild(row);
+    }
+
+    function getSpecialDates() {
+        const rows = document.querySelectorAll('.special-date-row');
+        const dates = [];
+        rows.forEach(row => {
+            const selects = row.querySelectorAll('select');
+            if (selects.length >= 2) {
+                dates.push({
+                    month: parseInt(selects[0].value),
+                    day: parseInt(selects[1].value),
+                });
+            }
+        });
+        return dates;
+    }
 
     // ─────────────────────────────────────────────
     // NAVIGATION
@@ -1229,7 +1408,72 @@
                 await new Promise(r => setTimeout(r, 50));
             }
             
-            // 3. Save PDF
+            // 3. Draw hearts on special dates
+            const markedDates = getSpecialDates();
+            if (markedDates.length > 0) {
+                progressText.textContent = 'Adding special dates...';
+                progressBar.style.width = '92%';
+                
+                for (const { month, day } of markedDates) {
+                    const cell = getDateCell(month, day);
+                    if (!cell) continue;
+                    
+                    const page = pages[month + 1]; // +1 for cover page
+                    
+                    // Draw a small filled circle as a highlight behind the date
+                    // Position: slightly below-right of center to frame the number
+                    const hx = cell.x;
+                    const hy = cell.y - 2;
+                    
+                    // Draw a soft pink/red circle around the date
+                    page.drawCircle({
+                        x: hx,
+                        y: hy,
+                        size: 18,
+                        color: PDFLib.rgb(0.92, 0.35, 0.4),
+                        opacity: 0.15,
+                    });
+                    
+                    // Draw a heart outline ring
+                    page.drawCircle({
+                        x: hx,
+                        y: hy,
+                        size: 18,
+                        borderColor: PDFLib.rgb(0.85, 0.25, 0.3),
+                        borderWidth: 1.5,
+                        color: PDFLib.rgb(1, 1, 1),
+                        opacity: 0,
+                    });
+                    
+                    // Draw a tiny heart using two overlapping circles + a triangle
+                    // Small heart at bottom-right corner of the cell
+                    const heartX = hx + 14;
+                    const heartY = hy - 12;
+                    const r = 4; // heart lobe radius
+                    
+                    page.drawCircle({
+                        x: heartX - r * 0.55,
+                        y: heartY + r * 0.3,
+                        size: r,
+                        color: PDFLib.rgb(0.85, 0.25, 0.3),
+                    });
+                    page.drawCircle({
+                        x: heartX + r * 0.55,
+                        y: heartY + r * 0.3,
+                        size: r,
+                        color: PDFLib.rgb(0.85, 0.25, 0.3),
+                    });
+                    // Bottom point of heart (triangle-ish via a small circle)
+                    page.drawCircle({
+                        x: heartX,
+                        y: heartY - r * 0.7,
+                        size: r * 0.7,
+                        color: PDFLib.rgb(0.85, 0.25, 0.3),
+                    });
+                }
+            }
+            
+            // 4. Save PDF
             progressText.textContent = 'Finalizing PDF...';
             progressBar.style.width = '95%';
             
@@ -1238,7 +1482,7 @@
             progressBar.style.width = '100%';
             progressText.textContent = 'Done!';
 
-            // 4. Save email + payment to Supabase (non-blocking)
+            // 5. Save email + payment to Supabase (non-blocking)
             saveEmail(email, paymentId).catch(err => console.warn('Email save failed:', err));
 
             // 5. Download
