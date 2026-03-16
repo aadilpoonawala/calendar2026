@@ -836,7 +836,7 @@
     const TEMPLATE_URL = '/2026_template.pdf';
 
     // Supabase config (to be filled in)
-    const SUPABASE_URL = 'https://eanqljtercjlewwrjhix.supabase.co';
+    const SUPABASE_URL = 'https://eanqljtercjlewwrjhix.supabase.co'';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVhbnFsanRlcmNqbGV3d3JqaGl4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM1NzYzNzEsImV4cCI6MjA4OTE1MjM3MX0.aqSq-GbMBV6iT0qmtzkxoCyJFgELQX-k_dtxHH_XuTw';
 
     // Razorpay config
@@ -1181,6 +1181,7 @@
             progressBar.style.width = '10%';
 
             // 2. Embed each photo and composite onto pages
+            // Template structure: page 0 = cover (2026), pages 1-12 = Jan-Dec
             const pages = pdfDoc.getPages();
             
             for (let i = 0; i < 12; i++) {
@@ -1188,7 +1189,7 @@
                 progressBar.style.width = `${10 + (i + 1) * 7}%`;
                 
                 const file = photos[window.photoOrder ? window.photoOrder[i] : i];
-                const page = pages[i]; // Pages 0-11 are Jan-Dec
+                const page = pages[i + 1]; // Skip cover page: Jan=1, Feb=2, ... Dec=12
                 
                 // Get image dimensions via browser, crop to rect aspect, embed
                 const { width: origW, height: origH } = await getImageDimensions(file);
