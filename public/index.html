@@ -1414,61 +1414,23 @@
                 progressText.textContent = 'Adding special dates...';
                 progressBar.style.width = '92%';
                 
+                // Render ❤️ emoji to a small PNG via canvas (once, reuse for all dates)
+                const heartPng = await renderEmojiToPng('❤️', 64);
+                const heartImage = await pdfDoc.embedPng(heartPng);
+                
                 for (const { month, day } of markedDates) {
                     const cell = getDateCell(month, day);
                     if (!cell) continue;
                     
                     const page = pages[month + 1]; // +1 for cover page
                     
-                    // Draw a small filled circle as a highlight behind the date
-                    // Position: slightly below-right of center to frame the number
-                    const hx = cell.x;
-                    const hy = cell.y - 2;
-                    
-                    // Draw a soft pink/red circle around the date
-                    page.drawCircle({
-                        x: hx,
-                        y: hy,
-                        size: 18,
-                        color: PDFLib.rgb(0.92, 0.35, 0.4),
-                        opacity: 0.15,
-                    });
-                    
-                    // Draw a heart outline ring
-                    page.drawCircle({
-                        x: hx,
-                        y: hy,
-                        size: 18,
-                        borderColor: PDFLib.rgb(0.85, 0.25, 0.3),
-                        borderWidth: 1.5,
-                        color: PDFLib.rgb(1, 1, 1),
-                        opacity: 0,
-                    });
-                    
-                    // Draw a tiny heart using two overlapping circles + a triangle
-                    // Small heart at bottom-right corner of the cell
-                    const heartX = hx + 14;
-                    const heartY = hy - 12;
-                    const r = 4; // heart lobe radius
-                    
-                    page.drawCircle({
-                        x: heartX - r * 0.55,
-                        y: heartY + r * 0.3,
-                        size: r,
-                        color: PDFLib.rgb(0.85, 0.25, 0.3),
-                    });
-                    page.drawCircle({
-                        x: heartX + r * 0.55,
-                        y: heartY + r * 0.3,
-                        size: r,
-                        color: PDFLib.rgb(0.85, 0.25, 0.3),
-                    });
-                    // Bottom point of heart (triangle-ish via a small circle)
-                    page.drawCircle({
-                        x: heartX,
-                        y: heartY - r * 0.7,
-                        size: r * 0.7,
-                        color: PDFLib.rgb(0.85, 0.25, 0.3),
+                    // Draw the heart emoji in the bottom-right of the date cell
+                    const heartSize = 16;
+                    page.drawImage(heartImage, {
+                        x: cell.x + 10,
+                        y: cell.y - 22,
+                        width: heartSize,
+                        height: heartSize,
                     });
                 }
             }
@@ -1513,6 +1475,25 @@
                 };
             }, 2000);
         }
+    }
+
+    // Render an emoji to a PNG Uint8Array via canvas
+    function renderEmojiToPng(emoji, size) {
+        return new Promise((resolve, reject) => {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            ctx.font = `${size * 0.85}px serif`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.drawText = ctx.fillText;
+            ctx.fillText(emoji, size / 2, size / 2 + 2);
+            canvas.toBlob(blob => {
+                if (!blob) return reject(new Error('Emoji render failed'));
+                blob.arrayBuffer().then(buf => resolve(new Uint8Array(buf)));
+            }, 'image/png');
+        });
     }
 
     // Get image dimensions without fully loading into memory
